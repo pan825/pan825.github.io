@@ -113,8 +113,8 @@
         
         .preset-buttons {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
             margin-top: 10px;
         }
         
@@ -216,8 +216,16 @@
                 <div class="preset-buttons">
                     <button onclick="setPreset('upright')">Upright</button>
                     <button onclick="setPreset('forward')">Forward Tilt</button>
+                    <button onclick="setPreset('backward')">Backward Tilt</button>
+                    <button onclick="setPreset('left')">Left Tilt</button>
                     <button onclick="setPreset('right')">Right Tilt</button>
                     <button onclick="setPreset('inverted')">Inverted</button>
+                    <button onclick="setPreset('leftSide')">Left Side</button>
+                    <button onclick="setPreset('rightSide')">Right Side</button>
+                    <button onclick="setPreset('diagonal')">Diagonal</button>
+                    <button onclick="setPreset('sleeping')">Sleeping</button>
+                    <button onclick="setPreset('climbing')">Climbing</button>
+                    <button onclick="setPreset('hanging')">Hanging</button>
                 </div>
             </div>
             
@@ -262,7 +270,7 @@
                 </div>
                 <div class="input-group">
                     <label>
-                        <input type="checkbox" id="showCustomVector" checked> Show custom vector
+                        <input type="checkbox" id="showCustomVector"> Show custom vector
                     </label>
                 </div>
                 <div class="input-group">
@@ -500,6 +508,7 @@
             
             // Custom vector (orange)
             customVector = createArrow(0xff9500, 'Custom Vector');
+            customVector.visible = false; // Start hidden by default
             scene.add(customVector);
         }
         
@@ -567,81 +576,93 @@
             
              // WINGS - Drosophila has only TWO wings (Diptera order)
              function createDrosophilaWing(isLeft) {
+                 const wingGroup = new THREE.Group();
+                 
+                 // Create simple, natural Drosophila wing shape
                  const wingShape = new THREE.Shape();
                  
-                 // Realistic Drosophila wing shape - more elongated and pointed
-                 wingShape.moveTo(0, 0);
-                 // Leading edge curve
-                 wingShape.quadraticCurveTo(0.02, 0.06, 0.08, 0.08);
-                 wingShape.quadraticCurveTo(0.16, 0.09, 0.24, 0.07);
-                 wingShape.quadraticCurveTo(0.30, 0.05, 0.32, 0.02);
-                 // Wing tip
-                 wingShape.quadraticCurveTo(0.33, 0, 0.32, -0.02);
-                 // Trailing edge
-                 wingShape.quadraticCurveTo(0.28, -0.04, 0.20, -0.05);
-                 wingShape.quadraticCurveTo(0.12, -0.05, 0.06, -0.04);
-                 wingShape.quadraticCurveTo(0.02, -0.03, 0, 0);
+                 // Simplified but realistic wing outline
+                 wingShape.moveTo(0, 0); // Wing base
+                 wingShape.lineTo(0.3, 0.08); // Leading edge
+                 wingShape.quadraticCurveTo(0.35, 0.06, 0.38, 0.02); // Wing tip
+                 wingShape.quadraticCurveTo(0.36, -0.02, 0.3, -0.04); // Trailing edge start
+                 wingShape.lineTo(0.15, -0.06); // Trailing edge middle
+                 wingShape.quadraticCurveTo(0.08, -0.04, 0.02, -0.02); // Back to base
+                 wingShape.lineTo(0, 0); // Close shape
                  
                  const wingGeometry = new THREE.ShapeGeometry(wingShape);
                  
+                 // Clean wing material
                  const wingMaterial = new THREE.MeshPhongMaterial({ 
-                     color: 0xF8F8FF, // Very light color
+                     color: 0xF5F5F5,
                      transparent: true,
-                     opacity: 0.2,
-                     shininess: 150,
+                     opacity: 0.6,
+                     shininess: 200,
                      side: THREE.DoubleSide,
-                     depthWrite: false // Prevents z-fighting with transparent wings
+                     depthWrite: false
                  });
                  
                  const wing = new THREE.Mesh(wingGeometry, wingMaterial);
+                 wingGroup.add(wing);
                  
-                 // Wing positioning - closer to body
-                 const xPos = isLeft ? -0.06 : 0.06;
-                 wing.position.set(xPos, 0.03, 0.04);
-                 
-                 // Wing orientation - more natural angle
-                 wing.rotation.x = Math.PI / 3; // Slight upward angle
-                 wing.rotation.z = isLeft ? Math.PI / 12 : -Math.PI / 12; // Slight outward angle
-                 wing.rotation.y = isLeft ? -Math.PI / 24 : Math.PI / 24; // Slight forward sweep
-                 
-                 // Add wing veins for realism
+                 // Simple but visible wing veins
                  const veins = new THREE.Group();
-                 
-                 // Create wing vein lines
                  const veinMaterial = new THREE.LineBasicMaterial({ 
-                     color: 0x888888, 
+                     color: 0x666666, 
                      transparent: true, 
-                     opacity: 0.3,
+                     opacity: 0.8,
                      linewidth: 1
                  });
                  
-                 // Main longitudinal veins
-                 for (let i = 0; i < 4; i++) {
-                     const veinGeometry = new THREE.BufferGeometry();
-                     const veinPoints = [
-                         new THREE.Vector3(0.02 + i * 0.06, 0.04 - i * 0.02, 0),
-                         new THREE.Vector3(0.25 + i * 0.02, 0.02 - i * 0.02, 0)
-                     ];
-                     veinGeometry.setFromPoints(veinPoints);
-                     const vein = new THREE.Line(veinGeometry, veinMaterial);
-                     veins.add(vein);
-                 }
+                 // Main longitudinal veins (simple lines)
+                 const vein1Points = [
+                     new THREE.Vector3(0.02, 0.01, 0.001),
+                     new THREE.Vector3(0.32, 0.05, 0.001)
+                 ];
+                 const vein1 = new THREE.Line(new THREE.BufferGeometry().setFromPoints(vein1Points), veinMaterial);
+                 veins.add(vein1);
+                 
+                 const vein2Points = [
+                     new THREE.Vector3(0.03, 0, 0.001),
+                     new THREE.Vector3(0.30, 0.01, 0.001)
+                 ];
+                 const vein2 = new THREE.Line(new THREE.BufferGeometry().setFromPoints(vein2Points), veinMaterial);
+                 veins.add(vein2);
+                 
+                 const vein3Points = [
+                     new THREE.Vector3(0.04, -0.01, 0.001),
+                     new THREE.Vector3(0.25, -0.03, 0.001)
+                 ];
+                 const vein3 = new THREE.Line(new THREE.BufferGeometry().setFromPoints(vein3Points), veinMaterial);
+                 veins.add(vein3);
                  
                  // Cross veins
-                 for (let i = 0; i < 3; i++) {
-                     const crossVeinGeometry = new THREE.BufferGeometry();
-                     const crossVeinPoints = [
-                         new THREE.Vector3(0.08 + i * 0.08, 0.06 - i * 0.02, 0),
-                         new THREE.Vector3(0.08 + i * 0.08, -0.02 - i * 0.01, 0)
-                     ];
-                     crossVeinGeometry.setFromPoints(crossVeinPoints);
-                     const crossVein = new THREE.Line(crossVeinGeometry, veinMaterial);
-                     veins.add(crossVein);
+                 const crossVein1Points = [
+                     new THREE.Vector3(0.15, 0.04, 0.001),
+                     new THREE.Vector3(0.17, -0.01, 0.001)
+                 ];
+                 const crossVein1 = new THREE.Line(new THREE.BufferGeometry().setFromPoints(crossVein1Points), veinMaterial);
+                 veins.add(crossVein1);
+                 
+                 wingGroup.add(veins);
+                 
+                 // Position and orient the wing naturally
+                 if (isLeft) {
+                     // Left wing
+                     wingGroup.position.set(-0.07, 0.03, 0.04);
+                     wingGroup.rotation.x = Math.PI / 12; // Slight upward angle
+                     wingGroup.rotation.z = Math.PI / 8; // Outward angle
+                     wingGroup.rotation.y = -Math.PI / 16; // Slight backward sweep
+                 } else {
+                     // Right wing - create symmetry by mirroring position and rotation
+                     wingGroup.position.set(0.07, 0.03, 0.04);
+                     wingGroup.rotation.x = Math.PI / 12; // Same upward angle
+                     wingGroup.rotation.z = -Math.PI / 8; // Mirror outward angle
+                     wingGroup.rotation.y = Math.PI / 16; // Mirror backward sweep
+                     wingGroup.scale.x = -1; // Mirror the wing shape
                  }
                  
-                 wing.add(veins);
-                 
-                 return wing;
+                 return wingGroup;
              }
              
              // Add halteres (small knob-like structures that replace hind wings in Diptera)
@@ -973,10 +994,26 @@
                     currentAlpha = 0; currentGamma = 0; break;
                 case 'forward':
                     currentAlpha = 45; currentGamma = 0; break;
+                case 'backward':
+                    currentAlpha = 45; currentGamma = 180; break;
+                case 'left':
+                    currentAlpha = 45; currentGamma = -90; break;
                 case 'right':
                     currentAlpha = 45; currentGamma = 90; break;
                 case 'inverted':
                     currentAlpha = 180; currentGamma = 0; break;
+                case 'leftSide':
+                    currentAlpha = 90; currentGamma = -90; break;
+                case 'rightSide':
+                    currentAlpha = 90; currentGamma = 90; break;
+                case 'diagonal':
+                    currentAlpha = 45; currentGamma = 45; break;
+                case 'sleeping':
+                    currentAlpha = 90; currentGamma = 0; break;
+                case 'climbing':
+                    currentAlpha = 30; currentGamma = 0; break;
+                case 'hanging':
+                    currentAlpha = 150; currentGamma = 0; break;
             }
             
             document.getElementById('alphaRange').value = currentAlpha;
