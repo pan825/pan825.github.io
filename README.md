@@ -12,6 +12,8 @@ In this model:
 
 This model is particularly useful when developing systems that need to track head orientation, such as for navigation, augmented reality, or for building a 3D compass.
 
+**Interactive Visualization**: For a hands-on demonstration of these concepts, see the [G Vector 3D Visualization](https://pan825.github.io/g.html) which provides an interactive tool to explore tilt angles, gravity vectors, and 3D orientation mapping.
+
 ## 2. Tilt Parameters: α (Alpha) and γ (Gamma)
 
 ### 2.1. α (Alpha) - Tilt Angle
