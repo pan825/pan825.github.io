@@ -1,1010 +1,126 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G Vector Visualization</title>
-    <style>
-        :root {
-            --bg: #0f1115;
-            --panel: #151822;
-            --ink: #e6e6e6;
-            --muted: #9aa4b2;
-            --accent: #33d17a;
-            --edge: #222633;
-            --warning: #ff6b6b;
-        }
-        
-        * { box-sizing: border-box; }
-        
-        body {
-            margin: 0;
-            background: var(--bg);
-            color: var(--ink);
-            font-family: system-ui, Segoe UI, Roboto, Arial;
-            overflow-x: hidden;
-        }
-        
-        .header {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--edge);
-            background: var(--panel);
-        }
-        
-        .container {
-            display: grid;
-            grid-template-columns: 350px 1fr;
-            height: calc(100vh - 60px);
-            gap: 0;
-        }
-        
-        .controls {
-            background: var(--panel);
-            border-right: 1px solid var(--edge);
-            padding: 20px;
-            overflow-y: auto;
-        }
-        
-        .canvas-container {
-            position: relative;
-            background: var(--bg);
-        }
-        
-        canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-        
-        .section {
-            margin-bottom: 25px;
-            padding: 15px;
-            background: rgba(34, 38, 51, 0.5);
-            border-radius: 8px;
-            border: 1px solid var(--edge);
-        }
-        
-        .section-title {
-            font-weight: 600;
-            margin-bottom: 15px;
-            color: var(--accent);
-            font-size: 14px;
-        }
-        
-        .input-group {
-            margin-bottom: 15px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-size: 12px;
-            color: var(--muted);
-        }
-        
-        input[type="range"] {
-            width: 100%;
-            margin-bottom: 8px;
-        }
-        
-        input[type="number"] {
-            width: 100%;
-            padding: 6px 8px;
-            background: #0e1016;
-            border: 1px solid #2a2e3d;
-            border-radius: 4px;
-            color: var(--ink);
-            font-size: 12px;
-        }
-        
-        .vector-display {
-            font-family: 'Courier New', monospace;
-            background: #0e1016;
-            border: 1px solid #2a2e3d;
-            border-radius: 4px;
-            padding: 10px;
-            margin-top: 10px;
-            font-size: 12px;
-        }
-        
-        .vector-component {
-            margin: 3px 0;
-        }
-        
-        .preset-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-top: 10px;
-        }
-        
-        button {
-            background: #0e1016;
-            border: 1px solid #2a2e3d;
-            color: var(--ink);
-            border-radius: 6px;
-            padding: 8px 10px;
-            font-size: 11px;
-            cursor: pointer;
-            transition: border-color 0.2s;
-        }
-        
-        button:hover {
-            border-color: var(--accent);
-        }
-        
-        .custom-vector {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 8px;
-            margin-top: 10px;
-        }
-        
-        .legend-items {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 12px;
-        }
-        
-        .legend-color {
-            width: 16px;
-            height: 16px;
-            border-radius: 3px;
-            border: 1px solid var(--edge);
-            flex-shrink: 0;
-        }
-        
-        .info-panel {
-            background: rgba(51, 209, 122, 0.1);
-            border: 1px solid var(--accent);
-            border-radius: 6px;
-            padding: 12px;
-            font-size: 12px;
-            line-height: 1.4;
-        }
-        
-        @media (max-width: 1200px) {
-            .container {
-                grid-template-columns: 1fr;
-                grid-template-rows: auto 1fr;
-            }
-            .controls {
-                border-right: none;
-                border-bottom: 1px solid var(--edge);
-                max-height: 300px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1 style="margin: 0; font-size: 18px;">G Vector 3D Visualization</h1>
-        <p style="margin: 5px 0 0 0; font-size: 13px; color: var(--muted);">
-            Interactive visualization of gravity vectors from tilt angles and custom vectors
-        </p>
-    </div>
-    
-    <div class="container">
-        <div class="controls">
-            <!-- Tilt-based G Vector -->
-            <div class="section">
-                <div class="section-title">Tilt-based G Vector</div>
-                <div class="input-group">
-                    <label>α (Alpha) - Tilt angle: 0° (upright) → 180° (upside down)</label>
-                    <input type="range" id="alphaRange" min="0" max="180" value="0" step="1">
-                    <input type="number" id="alphaNumber" min="0" max="180" value="0" step="1">
-                </div>
-                <div class="input-group">
-                    <label>γ (Gamma) - Rotation: 0° (+Z direction) → ±180°</label>
-                    <input type="range" id="gammaRange" min="-180" max="180" value="0" step="1">
-                    <input type="number" id="gammaNumber" min="-180" max="180" value="0" step="1">
-                </div>
-                <div class="vector-display" id="tiltVectorDisplay">
-                    <div>G = (sin α·sin γ, -cos α, sin α·cos γ)</div>
-                    <div class="vector-component">Gx = <span id="gx">0.00</span></div>
-                    <div class="vector-component">Gy = <span id="gy">-1.00</span></div>
-                    <div class="vector-component">Gz = <span id="gz">0.00</span></div>
-                    <div class="vector-component">||G|| = <span id="gnorm">1.00</span></div>
-                </div>
-                <div class="preset-buttons">
-                    <button onclick="setPreset('upright')">Upright</button>
-                    <button onclick="setPreset('forward')">Forward Tilt</button>
-                    <button onclick="setPreset('right')">Right Tilt</button>
-                    <button onclick="setPreset('inverted')">Inverted</button>
-                </div>
-            </div>
-            
-            <!-- Custom G Vector -->
-            <div class="section">
-                <div class="section-title">Custom G Vector</div>
-                <div class="input-group">
-                    <label>Enter custom vector components:</label>
-                    <div class="custom-vector">
-                        <input type="number" id="customX" placeholder="X" value="1" step="0.1">
-                        <input type="number" id="customY" placeholder="Y" value="1" step="0.1">
-                        <input type="number" id="customZ" placeholder="Z" value="0" step="0.1">
-                    </div>
-                    <button onclick="applyCustomVector()" style="width: 100%; margin-top: 8px;">Apply Custom Vector</button>
-                </div>
-                <div class="vector-display" id="customVectorDisplay">
-                    <div>Custom G = (x, y, z)</div>
-                    <div class="vector-component">Gx = <span id="customGx">1.00</span></div>
-                    <div class="vector-component">Gy = <span id="customGy">1.00</span></div>
-                    <div class="vector-component">Gz = <span id="customGz">0.00</span></div>
-                    <div class="vector-component">||G|| = <span id="customGnorm">1.41</span></div>
-                </div>
-            </div>
-            
-            <!-- Visualization Controls -->
-            <div class="section">
-                <div class="section-title">Visualization Controls</div>
-                <div class="input-group">
-                    <label>
-                        <input type="checkbox" id="showAxes" checked> Show coordinate axes
-                    </label>
-                </div>
-                <div class="input-group">
-                    <label>
-                        <input type="checkbox" id="showGrid" checked> Show grid
-                    </label>
-                </div>
-                <div class="input-group">
-                    <label>
-                        <input type="checkbox" id="showTiltVector" checked> Show tilt-based vector
-                    </label>
-                </div>
-                <div class="input-group">
-                    <label>
-                        <input type="checkbox" id="showCustomVector" checked> Show custom vector
-                    </label>
-                </div>
-                <div class="input-group">
-                    <label>
-                        <input type="checkbox" id="showDrosophila" checked> Show drosophila model
-                    </label>
-                </div>
-                <div class="input-group">
-                    <label>Vector scale factor:</label>
-                    <input type="range" id="scaleRange" min="0.5" max="3" value="1.5" step="0.1">
-                    <input type="number" id="scaleNumber" min="0.5" max="3" value="1.5" step="0.1">
-                </div>
-            </div>
-            
-            <!-- Legend -->
-            <div class="section">
-                <div class="section-title">Legend</div>
-                <div class="legend-items">
-                    <div class="legend-item">
-                        <div class="legend-color" style="background-color: #ff4444;"></div>
-                        <span>X-axis (Right)</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background-color: #44ff44;"></div>
-                        <span>Y-axis (Up)</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background-color: #4444ff;"></div>
-                        <span>Z-axis (Forward)</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background-color: #ff00ff;"></div>
-                        <span>Tilt-based G Vector</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background-color: #ff9500;"></div>
-                        <span>Custom G Vector</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background-color: #232a3a;"></div>
-                        <span>Grid Lines</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background-color: #8B4513;"></div>
-                        <span>Drosophila Model</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Info Panel -->
-            <div class="info-panel">
-                <strong>Coordinate System:</strong><br>
-                Head-centered coordinate frame where +Y is up, +X is right ear direction, +Z is nose direction.<br><br>
-                <strong>Tilt Vector:</strong> Represents gravity direction in head coordinate system where (0,0) is upright and gravity points down (-Y direction).
-            </div>
-        </div>
-        
-        <div class="canvas-container">
-            <canvas id="canvas"></canvas>
-        </div>
-    </div>
+# Theory of the Tilt Model and 3D Compass
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script>
-        // Three.js setup
-        let scene, camera, renderer, controls;
-        let tiltVector, customVector;
-        let coordinateAxes = { x: null, y: null, z: null };
-        let gridHelper;
-        let drosophilaModel;
-        
-        // Current vector values
-        let currentAlpha = 0;
-        let currentGamma = 0;
-        let currentCustomVector = { x: 1, y: 1, z: 0 };
-        let vectorScale = 1.5;
-        
-        function init() {
-            const canvas = document.getElementById('canvas');
-            const container = canvas.parentElement;
-            
-            // Scene
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0f1115);
-            
-            // Camera
-            camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
-            camera.position.set(5, 5, 5);
-            
-            // Renderer
-            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
-            renderer.setSize(container.clientWidth, container.clientHeight);
-            
-            // Controls (basic rotation)
-            setupControls();
-            
-            // Create coordinate axes
-            createCoordinateAxes();
-            
-            // Create grid
-            createGrid();
-            
-            // Create vectors
-            createVectors();
-            
-            // Create drosophila model
-            createDrosophilaModel();
-            
-            // Add lighting
-            const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
-            scene.add(ambientLight);
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(10, 10, 5);
-            scene.add(directionalLight);
-            
-            // Initial render
-            updateTiltVector();
-            updateCustomVector();
-            animate();
-            
-            // Event listeners
-            setupEventListeners();
-            
-            // Handle window resize
-            window.addEventListener('resize', onWindowResize, false);
-        }
-        
-        function setupControls() {
-            let isMouseDown = false;
-            let mouseX = 0, mouseY = 0;
-            let targetRotationX = 0, targetRotationY = 0;
-            let rotationX = 0, rotationY = 0;
-            
-            const canvas = document.getElementById('canvas');
-            
-            canvas.addEventListener('mousedown', (event) => {
-                isMouseDown = true;
-                mouseX = event.clientX;
-                mouseY = event.clientY;
-            });
-            
-            canvas.addEventListener('mousemove', (event) => {
-                if (isMouseDown) {
-                    const deltaX = event.clientX - mouseX;
-                    const deltaY = event.clientY - mouseY;
-                    
-                    targetRotationY += deltaX * 0.01;
-                    targetRotationX += deltaY * 0.01;
-                    targetRotationX = Math.max(-Math.PI/2, Math.min(Math.PI/2, targetRotationX));
-                    
-                    mouseX = event.clientX;
-                    mouseY = event.clientY;
-                }
-            });
-            
-            canvas.addEventListener('mouseup', () => {
-                isMouseDown = false;
-            });
-            
-            canvas.addEventListener('wheel', (event) => {
-                event.preventDefault();
-                const zoom = event.deltaY > 0 ? 1.1 : 0.9;
-                camera.position.multiplyScalar(zoom);
-                camera.position.clampLength(2, 50);
-            });
-            
-            // Smooth rotation animation
-            function updateCameraRotation() {
-                rotationX += (targetRotationX - rotationX) * 0.1;
-                rotationY += (targetRotationY - rotationY) * 0.1;
-                
-                const radius = camera.position.length();
-                camera.position.x = radius * Math.sin(rotationY) * Math.cos(rotationX);
-                camera.position.y = radius * Math.sin(rotationX);
-                camera.position.z = radius * Math.cos(rotationY) * Math.cos(rotationX);
-                camera.lookAt(0, 0, 0);
-                
-                requestAnimationFrame(updateCameraRotation);
-            }
-            updateCameraRotation();
-        }
-        
-        function createCoordinateAxes() {
-            const axisLength = 2;
-            const axisWidth = 0.05;
-            
-            // X-axis (red)
-            const xGeometry = new THREE.CylinderGeometry(axisWidth, axisWidth, axisLength, 8);
-            const xMaterial = new THREE.MeshPhongMaterial({ color: 0xff4444 });
-            coordinateAxes.x = new THREE.Mesh(xGeometry, xMaterial);
-            coordinateAxes.x.rotation.z = -Math.PI / 2;
-            coordinateAxes.x.position.x = axisLength / 2;
-            scene.add(coordinateAxes.x);
-            
-            // Y-axis (green)
-            const yGeometry = new THREE.CylinderGeometry(axisWidth, axisWidth, axisLength, 8);
-            const yMaterial = new THREE.MeshPhongMaterial({ color: 0x44ff44 });
-            coordinateAxes.y = new THREE.Mesh(yGeometry, yMaterial);
-            coordinateAxes.y.position.y = axisLength / 2;
-            scene.add(coordinateAxes.y);
-            
-            // Z-axis (blue)
-            const zGeometry = new THREE.CylinderGeometry(axisWidth, axisWidth, axisLength, 8);
-            const zMaterial = new THREE.MeshPhongMaterial({ color: 0x4444ff });
-            coordinateAxes.z = new THREE.Mesh(zGeometry, zMaterial);
-            coordinateAxes.z.rotation.x = Math.PI / 2;
-            coordinateAxes.z.position.z = axisLength / 2;
-            scene.add(coordinateAxes.z);
-            
-            // Add axis labels (simple spheres at the ends)
-            const labelGeometry = new THREE.SphereGeometry(0.1, 8, 6);
-            
-            const xLabel = new THREE.Mesh(labelGeometry, new THREE.MeshPhongMaterial({ color: 0xff4444 }));
-            xLabel.position.set(axisLength, 0, 0);
-            scene.add(xLabel);
-            
-            const yLabel = new THREE.Mesh(labelGeometry, new THREE.MeshPhongMaterial({ color: 0x44ff44 }));
-            yLabel.position.set(0, axisLength, 0);
-            scene.add(yLabel);
-            
-            const zLabel = new THREE.Mesh(labelGeometry, new THREE.MeshPhongMaterial({ color: 0x4444ff }));
-            zLabel.position.set(0, 0, axisLength);
-            scene.add(zLabel);
-        }
-        
-        function createGrid() {
-            gridHelper = new THREE.GridHelper(4, 20, 0x232a3a, 0x232a3a);
-            scene.add(gridHelper);
-        }
-        
-        function createVectors() {
-            // Tilt-based vector (bright magenta/pink)
-            tiltVector = createArrow(0xff00ff, 'Tilt Vector');
-            scene.add(tiltVector);
-            
-            // Custom vector (orange)
-            customVector = createArrow(0xff9500, 'Custom Vector');
-            scene.add(customVector);
-        }
-        
-        function createDrosophilaModel() {
-            drosophilaModel = new THREE.Group();
-            drosophilaModel.name = 'Drosophila';
-            
-            // Create realistic Drosophila with proper proportions and textures
-            
-            // THORAX (main body segment) - realistic segmented appearance
-            const thoraxGeometry = new THREE.SphereGeometry(0.08, 16, 12);
-            const thoraxMaterial = new THREE.MeshPhongMaterial({ 
-                color: 0x654321,
-                shininess: 60,
-                specular: 0x111111
-            });
-            const thorax = new THREE.Mesh(thoraxGeometry, thoraxMaterial);
-            thorax.scale.set(1.2, 0.8, 1.8); // Barrel-shaped thorax
-            thorax.position.set(0, 0, 0);
-            drosophilaModel.add(thorax);
-            
-            // ABDOMEN - segmented, tapered
-            const abdomenSegments = 6;
-            for (let i = 0; i < abdomenSegments; i++) {
-                const segmentSize = 0.06 - (i * 0.008); // Tapering
-                const segmentGeometry = new THREE.SphereGeometry(segmentSize, 12, 8);
-                const segmentMaterial = new THREE.MeshPhongMaterial({ 
-                    color: i % 2 === 0 ? 0x8B4513 : 0x654321, // Alternating stripes
-                    shininess: 40
-                });
-                const segment = new THREE.Mesh(segmentGeometry, segmentMaterial);
-                segment.scale.set(1, 0.7, 0.8);
-                segment.position.set(0, -0.01, -0.15 - (i * 0.08));
-                drosophilaModel.add(segment);
-            }
-            
-            // HEAD - more realistic proportions
-            const headGeometry = new THREE.SphereGeometry(0.055, 16, 12);
-            const headMaterial = new THREE.MeshPhongMaterial({ 
-                color: 0x4A3F35,
-                shininess: 30
-            });
-            const head = new THREE.Mesh(headGeometry, headMaterial);
-            head.scale.set(1.1, 0.9, 0.8);
-            head.position.set(0, 0.02, 0.18);
-            drosophilaModel.add(head);
-            
-            // COMPOUND EYES - large, characteristic of Drosophila
-            const eyeGeometry = new THREE.SphereGeometry(0.035, 16, 12);
-            const eyeMaterial = new THREE.MeshPhongMaterial({ 
-                color: 0x8B0000, // Dark red compound eyes
-                shininess: 100,
-                specular: 0x442222
-            });
-            
-            const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-            leftEye.position.set(-0.042, 0.015, 0.22);
-            leftEye.scale.set(0.9, 1.1, 1);
-            drosophilaModel.add(leftEye);
-            
-            const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-            rightEye.position.set(0.042, 0.015, 0.22);
-            rightEye.scale.set(0.9, 1.1, 1);
-            drosophilaModel.add(rightEye);
-            
-             // WINGS - Drosophila has only TWO wings (Diptera order)
-             function createDrosophilaWing(isLeft) {
-                 const wingShape = new THREE.Shape();
-                 
-                 // Realistic Drosophila wing shape - more elongated and pointed
-                 wingShape.moveTo(0, 0);
-                 // Leading edge curve
-                 wingShape.quadraticCurveTo(0.02, 0.06, 0.08, 0.08);
-                 wingShape.quadraticCurveTo(0.16, 0.09, 0.24, 0.07);
-                 wingShape.quadraticCurveTo(0.30, 0.05, 0.32, 0.02);
-                 // Wing tip
-                 wingShape.quadraticCurveTo(0.33, 0, 0.32, -0.02);
-                 // Trailing edge
-                 wingShape.quadraticCurveTo(0.28, -0.04, 0.20, -0.05);
-                 wingShape.quadraticCurveTo(0.12, -0.05, 0.06, -0.04);
-                 wingShape.quadraticCurveTo(0.02, -0.03, 0, 0);
-                 
-                 const wingGeometry = new THREE.ShapeGeometry(wingShape);
-                 
-                 const wingMaterial = new THREE.MeshPhongMaterial({ 
-                     color: 0xF8F8FF, // Very light color
-                     transparent: true,
-                     opacity: 0.2,
-                     shininess: 150,
-                     side: THREE.DoubleSide,
-                     depthWrite: false // Prevents z-fighting with transparent wings
-                 });
-                 
-                 const wing = new THREE.Mesh(wingGeometry, wingMaterial);
-                 
-                 // Wing positioning - closer to body
-                 const xPos = isLeft ? -0.06 : 0.06;
-                 wing.position.set(xPos, 0.03, 0.04);
-                 
-                 // Wing orientation - more natural angle
-                 wing.rotation.x = Math.PI / 3; // Slight upward angle
-                 wing.rotation.z = isLeft ? Math.PI / 12 : -Math.PI / 12; // Slight outward angle
-                 wing.rotation.y = isLeft ? -Math.PI / 24 : Math.PI / 24; // Slight forward sweep
-                 
-                 // Add wing veins for realism
-                 const veins = new THREE.Group();
-                 
-                 // Create wing vein lines
-                 const veinMaterial = new THREE.LineBasicMaterial({ 
-                     color: 0x888888, 
-                     transparent: true, 
-                     opacity: 0.3,
-                     linewidth: 1
-                 });
-                 
-                 // Main longitudinal veins
-                 for (let i = 0; i < 4; i++) {
-                     const veinGeometry = new THREE.BufferGeometry();
-                     const veinPoints = [
-                         new THREE.Vector3(0.02 + i * 0.06, 0.04 - i * 0.02, 0),
-                         new THREE.Vector3(0.25 + i * 0.02, 0.02 - i * 0.02, 0)
-                     ];
-                     veinGeometry.setFromPoints(veinPoints);
-                     const vein = new THREE.Line(veinGeometry, veinMaterial);
-                     veins.add(vein);
-                 }
-                 
-                 // Cross veins
-                 for (let i = 0; i < 3; i++) {
-                     const crossVeinGeometry = new THREE.BufferGeometry();
-                     const crossVeinPoints = [
-                         new THREE.Vector3(0.08 + i * 0.08, 0.06 - i * 0.02, 0),
-                         new THREE.Vector3(0.08 + i * 0.08, -0.02 - i * 0.01, 0)
-                     ];
-                     crossVeinGeometry.setFromPoints(crossVeinPoints);
-                     const crossVein = new THREE.Line(crossVeinGeometry, veinMaterial);
-                     veins.add(crossVein);
-                 }
-                 
-                 wing.add(veins);
-                 
-                 return wing;
-             }
-             
-             // Add halteres (small knob-like structures that replace hind wings in Diptera)
-             function createHaltere(isLeft) {
-                 const haltereGroup = new THREE.Group();
-                 
-                 // Haltere stalk
-                 const stalkGeometry = new THREE.CylinderGeometry(0.001, 0.001, 0.015, 4);
-                 const stalkmaterial = new THREE.MeshPhongMaterial({ color: 0x444444 });
-                 const stalk = new THREE.Mesh(stalkGeometry, stalkmaterial);
-                 stalk.rotation.x = Math.PI / 4;
-                 haltereGroup.add(stalk);
-                 
-                 // Haltere knob
-                 const knobGeometry = new THREE.SphereGeometry(0.003, 6, 4);
-                 const knobMaterial = new THREE.MeshPhongMaterial({ color: 0x666666 });
-                 const knob = new THREE.Mesh(knobGeometry, knobMaterial);
-                 knob.position.set(0, 0.008, 0.008);
-                 haltereGroup.add(knob);
-                 
-                 // Position halteres behind wings
-                 const xPos = isLeft ? -0.05 : 0.05;
-                 haltereGroup.position.set(xPos, 0.02, -0.02);
-                 haltereGroup.rotation.z = isLeft ? Math.PI / 6 : -Math.PI / 6;
-                 
-                 return haltereGroup;
-             }
-             
-             // Add only TWO wings (characteristic of Diptera)
-             drosophilaModel.add(createDrosophilaWing(true));   // Left wing
-             drosophilaModel.add(createDrosophilaWing(false));  // Right wing
-             
-             // Add halteres (modified hind wings)
-             drosophilaModel.add(createHaltere(true));   // Left haltere
-             drosophilaModel.add(createHaltere(false));  // Right haltere
-            
-            // LEGS - more realistic with joints
-            function createLeg(side, position, angle) {
-                const legGroup = new THREE.Group();
-                
-                // Coxa (hip joint)
-                const coxaGeometry = new THREE.SphereGeometry(0.008, 6, 4);
-                const legMaterial = new THREE.MeshPhongMaterial({ color: 0x2F2F2F });
-                const coxa = new THREE.Mesh(coxaGeometry, legMaterial);
-                legGroup.add(coxa);
-                
-                // Femur (thigh)
-                const femurGeometry = new THREE.CylinderGeometry(0.004, 0.003, 0.04, 6);
-                const femur = new THREE.Mesh(femurGeometry, legMaterial);
-                femur.position.set(0, -0.02, 0);
-                femur.rotation.z = angle;
-                legGroup.add(femur);
-                
-                // Tibia (shin)
-                const tibiaGeometry = new THREE.CylinderGeometry(0.003, 0.002, 0.035, 6);
-                const tibia = new THREE.Mesh(tibiaGeometry, legMaterial);
-                tibia.position.set(
-                    Math.sin(angle) * 0.035,
-                    -0.055,
-                    0
-                );
-                tibia.rotation.z = angle + Math.PI/6;
-                legGroup.add(tibia);
-                
-                // Position the leg group
-                legGroup.position.set(side * 0.08, -0.06, position);
-                return legGroup;
-            }
-            
-            // Add all six legs
-            drosophilaModel.add(createLeg(-1, 0.08, Math.PI/4));    // Left front
-            drosophilaModel.add(createLeg(1, 0.08, -Math.PI/4));    // Right front
-            drosophilaModel.add(createLeg(-1, 0, Math.PI/2));       // Left middle
-            drosophilaModel.add(createLeg(1, 0, -Math.PI/2));       // Right middle
-            drosophilaModel.add(createLeg(-1, -0.08, 3*Math.PI/4)); // Left back
-            drosophilaModel.add(createLeg(1, -0.08, -3*Math.PI/4)); // Right back
-            
-            // ANTENNAE - more detailed with segments
-            function createAntenna(side) {
-                const antennaGroup = new THREE.Group();
-                
-                // Scape (base segment)
-                const scapeGeometry = new THREE.CylinderGeometry(0.003, 0.002, 0.015, 6);
-                const antennaMaterial = new THREE.MeshPhongMaterial({ color: 0x2F2F2F });
-                const scape = new THREE.Mesh(scapeGeometry, antennaMaterial);
-                scape.position.set(0, 0.01, 0);
-                antennaGroup.add(scape);
-                
-                // Pedicel (second segment)
-                const pedicelGeometry = new THREE.CylinderGeometry(0.002, 0.001, 0.01, 6);
-                const pedicel = new THREE.Mesh(pedicelGeometry, antennaMaterial);
-                pedicel.position.set(0, 0.022, 0);
-                antennaGroup.add(pedicel);
-                
-                // Flagellum (third segment with arista)
-                const flagellumGeometry = new THREE.SphereGeometry(0.004, 8, 6);
-                const flagellum = new THREE.Mesh(flagellumGeometry, antennaMaterial);
-                flagellum.position.set(0, 0.03, 0);
-                antennaGroup.add(flagellum);
-                
-                // Arista (feathery extension)
-                const aristaGeometry = new THREE.CylinderGeometry(0.0005, 0.0005, 0.025, 4);
-                const arista = new THREE.Mesh(aristaGeometry, antennaMaterial);
-                arista.position.set(side * 0.01, 0.04, 0);
-                arista.rotation.z = side * Math.PI/6;
-                antennaGroup.add(arista);
-                
-                antennaGroup.position.set(side * 0.025, 0.04, 0.24);
-                antennaGroup.rotation.z = side * Math.PI/8;
-                return antennaGroup;
-            }
-            
-            drosophilaModel.add(createAntenna(-1)); // Left antenna
-            drosophilaModel.add(createAntenna(1));  // Right antenna
-            
-            // PROBOSCIS (feeding tube)
-            const proboscisGeometry = new THREE.CylinderGeometry(0.002, 0.001, 0.015, 6);
-            const proboscisMaterial = new THREE.MeshPhongMaterial({ color: 0x4A3F35 });
-            const proboscis = new THREE.Mesh(proboscisGeometry, proboscisMaterial);
-            proboscis.position.set(0, -0.02, 0.24);
-            proboscis.rotation.x = Math.PI/4;
-            drosophilaModel.add(proboscis);
-            
-            // Scale the entire model to appropriate size
-            drosophilaModel.scale.set(1.5, 1.5, 1.5);
-            
-            scene.add(drosophilaModel);
-        }
-        
-        function createArrow(color, name) {
-            const group = new THREE.Group();
-            group.name = name;
-            
-            // Arrow shaft (cylinder pointing up along Y-axis by default)
-            const shaftGeometry = new THREE.CylinderGeometry(0.02, 0.02, 1, 8);
-            const shaftMaterial = new THREE.MeshPhongMaterial({ color: color });
-            const shaft = new THREE.Mesh(shaftGeometry, shaftMaterial);
-            group.add(shaft);
-            
-            // Arrow head (cone pointing up along Y-axis by default)
-            const headGeometry = new THREE.ConeGeometry(0.08, 0.2, 8);
-            const headMaterial = new THREE.MeshPhongMaterial({ color: color });
-            const head = new THREE.Mesh(headGeometry, headMaterial);
-            group.add(head);
-            
-            return group;
-        }
-        
-        function updateArrow(arrow, direction, scale = 1) {
-            if (!arrow) return;
-            
-            const length = direction.length() * scale;
-            const normalizedDirection = direction.clone().normalize();
-            
-            // Calculate the actual arrow length (shaft + head)
-            const headHeight = 0.2;
-            const shaftLength = Math.max(0.1, length - headHeight * 0.5);
-            
-            // Update shaft
-            const shaft = arrow.children[0];
-            shaft.scale.set(1, shaftLength, 1);
-            shaft.position.set(0, shaftLength / 2, 0);
-            
-            // Update head position (place it at the end of the shaft)
-            const head = arrow.children[1];
-            head.position.set(0, shaftLength + headHeight / 2, 0);
-            
-            // Create a transformation matrix to orient the arrow
-            const up = new THREE.Vector3(0, 1, 0);
-            const quaternion = new THREE.Quaternion();
-            quaternion.setFromUnitVectors(up, normalizedDirection);
-            
-            // Apply the rotation to the entire arrow group
-            arrow.setRotationFromQuaternion(quaternion);
-        }
-        
-        function calculateTiltVector(alphaDeg, gammaDeg) {
-            const alpha = alphaDeg * Math.PI / 180;
-            const gamma = gammaDeg * Math.PI / 180;
-            
-            const x = Math.sin(alpha) * Math.sin(gamma);
-            const y = -Math.cos(alpha);
-            const z = Math.sin(alpha) * Math.cos(gamma);
-            
-            return new THREE.Vector3(x, y, z);
-        }
-        
-        function updateTiltVector() {
-            const vector = calculateTiltVector(currentAlpha, currentGamma);
-            updateArrow(tiltVector, vector, vectorScale);
-            
-            // Update drosophila model orientation
-            updateDrosophilaOrientation();
-            
-            // Update display
-            document.getElementById('gx').textContent = vector.x.toFixed(3);
-            document.getElementById('gy').textContent = vector.y.toFixed(3);
-            document.getElementById('gz').textContent = vector.z.toFixed(3);
-            document.getElementById('gnorm').textContent = vector.length().toFixed(3);
-        }
-        
-        function updateDrosophilaOrientation() {
-            if (!drosophilaModel) return;
-            
-            // Convert angles to radians
-            const alpha = currentAlpha * Math.PI / 180;
-            const gamma = currentGamma * Math.PI / 180;
-            
-            // Reset rotation
-            drosophilaModel.rotation.set(0, 0, 0);
-            
-            // Apply rotations to match the head coordinate system
-            // First rotate around Z-axis (gamma - yaw rotation)
-            drosophilaModel.rotateZ(gamma);
-            
-            // Then rotate around X-axis (alpha - pitch/tilt rotation)
-            drosophilaModel.rotateX(alpha);
-        }
-        
-        function updateCustomVector() {
-            const vector = new THREE.Vector3(
-                currentCustomVector.x,
-                currentCustomVector.y,
-                currentCustomVector.z
-            ).normalize();
-            
-            updateArrow(customVector, vector, vectorScale);
-            
-            // Update display
-            const originalLength = Math.sqrt(
-                currentCustomVector.x * currentCustomVector.x +
-                currentCustomVector.y * currentCustomVector.y +
-                currentCustomVector.z * currentCustomVector.z
-            );
-            
-            document.getElementById('customGx').textContent = currentCustomVector.x.toFixed(3);
-            document.getElementById('customGy').textContent = currentCustomVector.y.toFixed(3);
-            document.getElementById('customGz').textContent = currentCustomVector.z.toFixed(3);
-            document.getElementById('customGnorm').textContent = originalLength.toFixed(3);
-        }
-        
-        function setupEventListeners() {
-            // Tilt controls
-            const alphaRange = document.getElementById('alphaRange');
-            const alphaNumber = document.getElementById('alphaNumber');
-            const gammaRange = document.getElementById('gammaRange');
-            const gammaNumber = document.getElementById('gammaNumber');
-            
-            function syncAlpha() {
-                currentAlpha = parseFloat(alphaRange.value);
-                alphaNumber.value = currentAlpha;
-                updateTiltVector();
-            }
-            
-            function syncGamma() {
-                currentGamma = parseFloat(gammaRange.value);
-                gammaNumber.value = currentGamma;
-                updateTiltVector();
-            }
-            
-            alphaRange.addEventListener('input', syncAlpha);
-            alphaNumber.addEventListener('input', () => {
-                alphaRange.value = alphaNumber.value;
-                syncAlpha();
-            });
-            
-            gammaRange.addEventListener('input', syncGamma);
-            gammaNumber.addEventListener('input', () => {
-                gammaRange.value = gammaNumber.value;
-                syncGamma();
-            });
-            
-            // Custom vector controls
-            document.getElementById('customX').addEventListener('input', updateCustomVectorFromInputs);
-            document.getElementById('customY').addEventListener('input', updateCustomVectorFromInputs);
-            document.getElementById('customZ').addEventListener('input', updateCustomVectorFromInputs);
-            
-            // Scale controls
-            const scaleRange = document.getElementById('scaleRange');
-            const scaleNumber = document.getElementById('scaleNumber');
-            
-            function updateScale() {
-                vectorScale = parseFloat(scaleRange.value);
-                scaleNumber.value = vectorScale;
-                updateTiltVector();
-                updateCustomVector();
-            }
-            
-            scaleRange.addEventListener('input', updateScale);
-            scaleNumber.addEventListener('input', () => {
-                scaleRange.value = scaleNumber.value;
-                updateScale();
-            });
-            
-            // Visibility controls
-            document.getElementById('showAxes').addEventListener('change', (e) => {
-                Object.values(coordinateAxes).forEach(axis => {
-                    if (axis) axis.visible = e.target.checked;
-                });
-            });
-            
-            document.getElementById('showGrid').addEventListener('change', (e) => {
-                if (gridHelper) gridHelper.visible = e.target.checked;
-            });
-            
-            document.getElementById('showTiltVector').addEventListener('change', (e) => {
-                if (tiltVector) tiltVector.visible = e.target.checked;
-            });
-            
-            document.getElementById('showCustomVector').addEventListener('change', (e) => {
-                if (customVector) customVector.visible = e.target.checked;
-            });
-            
-            document.getElementById('showDrosophila').addEventListener('change', (e) => {
-                if (drosophilaModel) drosophilaModel.visible = e.target.checked;
-            });
-        }
-        
-        function updateCustomVectorFromInputs() {
-            currentCustomVector.x = parseFloat(document.getElementById('customX').value) || 0;
-            currentCustomVector.y = parseFloat(document.getElementById('customY').value) || 0;
-            currentCustomVector.z = parseFloat(document.getElementById('customZ').value) || 0;
-            updateCustomVector();
-        }
-        
-        function setPreset(preset) {
-            switch (preset) {
-                case 'upright':
-                    currentAlpha = 0; currentGamma = 0; break;
-                case 'forward':
-                    currentAlpha = 45; currentGamma = 0; break;
-                case 'right':
-                    currentAlpha = 45; currentGamma = 90; break;
-                case 'inverted':
-                    currentAlpha = 180; currentGamma = 0; break;
-            }
-            
-            document.getElementById('alphaRange').value = currentAlpha;
-            document.getElementById('alphaNumber').value = currentAlpha;
-            document.getElementById('gammaRange').value = currentGamma;
-            document.getElementById('gammaNumber').value = currentGamma;
-            
-            updateTiltVector();
-        }
-        
-        function applyCustomVector() {
-            updateCustomVectorFromInputs();
-        }
-        
-        function animate() {
-            requestAnimationFrame(animate);
-            renderer.render(scene, camera);
-        }
-        
-        function onWindowResize() {
-            const container = document.querySelector('.canvas-container');
-            camera.aspect = container.clientWidth / container.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(container.clientWidth, container.clientHeight);
-        }
-        
-        // Initialize when page loads
-        window.addEventListener('load', init);
-    </script>
-</body>
-</html>
+This document explains the theory behind the **Tilt Model** and how it is applied to a **3D compass** in the context of head direction, tilt, and gravity-based reference systems. We explore how **α (alpha)**, **γ (gamma)**, and their relationships with the gravitational vector \( \mathbf{G} \) map to a unit sphere and how these parameters are used to model head direction and orientation in 3D space.
+
+## 1. Introduction
+
+The **Tilt Model** refers to the orientation of an object (e.g., the head) relative to the gravity vector. By defining this orientation in terms of two parameters, **α (alpha)** and **γ (gamma)**, we can represent the head's position in 3D space and use it as a reference for navigating and determining orientation.
+
+In this model:
+- **α (alpha)** is the **tilt angle** with respect to the gravitational vector (range: 0° to 180°).
+- **γ (gamma)** is the **tilt direction** or **tilt orientation**, indicating the direction of the tilt (range: -180° to +180°).
+
+This model is particularly useful when developing systems that need to track head orientation, such as for navigation, augmented reality, or for building a 3D compass.
+
+## 2. Tilt Parameters: α (Alpha) and γ (Gamma)
+
+### 2.1. α (Alpha) - Tilt Angle
+
+**α (alpha)** represents the tilt angle between the head's **up axis** and the **gravity vector**  $\mathbf{G} = (G_x, G_y, G_z)$ , where:
+
+- 0° corresponds to the **upright position** (the head is aligned with the gravity vector).
+- 180° corresponds to the **inverted position** (the head is upside down relative to gravity).
+
+Mathematically, **α (alpha)** is calculated as the angle between the **head's vertical axis** (up direction) and the **gravity vector**:
+
+$$
+\alpha = \arccos(-G_y)
+$$
+
+where $G_y$ is the **y-component** of the gravity vector.
+
+### 2.2. γ (Gamma) - Tilt Orientation
+
+**γ (gamma)** is the **tilt direction** or **tilt orientation**, which represents the direction of tilt relative to the head's upright position. It is measured as the azimuth or **horizontal angle** in the **head's horizontal plane**. **γ (gamma)** varies between -180° and +180°, where:
+
+- 0° represents the **nose-down** position (forward).
+- +90° represents the **right-ear-down** position.
+- -90° represents the **left-ear-down** position.
+
+Mathematically, **γ (gamma)** can be calculated as:
+
+$$
+\gamma = \arctan\left(\frac{G_x}{G_z}\right)
+$$
+
+where \( G_x \) and \( G_z \) are the **x** and **z-components** of the gravity vector, respectively.
+
+## 3. Mapping α and γ to a Unit Sphere
+
+### 3.1. The Relationship between α, γ, and the Gravity Vector
+
+The **gravity vector** $\mathbf{G} = (G_x, G_y, G_z)$  can be mapped onto a **unit sphere** using the tilt parameters **α (alpha)** and **γ (gamma)**. The conversion from tilt parameters to a 3D vector on the sphere is given by:
+
+$$
+G_x = \sin(\alpha) \cdot \sin(\gamma)
+$$
+
+$$G_y = -\cos(\alpha)
+$$
+
+$$G_z = \sin(\alpha) \cdot \cos(\gamma)
+$$
+
+where:
+- **α (alpha)** is the tilt angle (from 0° to 180°).
+- **γ (gamma)** is the tilt orientation (from -180° to +180°).
+
+The gravity vector \( \mathbf{G} \) represents the "downward" direction relative to the head, with the head's **up axis** corresponding to the **+Y axis** and the **nose-forward axis** corresponding to the **+Z axis**.
+
+### 3.2. From α and γ to the Unit Sphere
+
+Given the equations above, the unit vector **G** can be plotted as a point on a sphere. This is used to track the **head's orientation** in 3D space. The **α (alpha)** and **γ (gamma)** values map directly to coordinates on a sphere, and by modifying these parameters, we can simulate different head orientations and understand their relationship with gravity.
+
+## 4. Mapping α and γ to a 2D Map (Plate Carrée Projection)
+
+To visualize the tilt angles, we can **map** the 3D spherical representation of **α (alpha)** and **γ (gamma)** onto a 2D plane (using a **Plate Carrée projection**).
+
+In this projection:
+- **α (alpha)** is mapped to the **vertical axis (y-axis)** of the map, where 0° is at the top (upright) and 180° is at the bottom (inverted).
+- **γ (gamma)** is mapped to the **horizontal axis (x-axis)** of the map, where -180° is the left side and +180° is the right side.
+
+The equations for mapping **α** and **γ** to the 2D map coordinates are:
+
+
+$$x = \frac{\gamma + 180^\circ}{360^\circ} \cdot W$$
+
+$$y = \frac{\alpha}{180^\circ} \cdot H$$
+
+
+where:
+- **W** is the width of the map,
+- **H** is the height of the map.
+
+Conversely, we can reverse the mapping from 2D coordinates to **α (alpha)** and **γ (gamma)**:
+
+
+$$\gamma = \frac{x}{W} \cdot 360^\circ - 180^\circ$$
+
+$$\alpha = \frac{y}{H} \cdot 180^\circ$$
+
+
+### 4.1. Use of the Map in Navigation and Tilt Detection
+
+This 2D map serves as a simple way to visualize the tilt of an object or head. By mapping the **α (alpha)** and **γ (gamma)** values, we can track the object's orientation in real time, making this model applicable in fields like:
+- **Virtual reality**: To simulate head movements and provide realistic navigation.
+- **Augmented reality**: To track the real-world orientation of devices and render augmented objects accordingly.
+- **Robotics**: For robot navigation and balancing.
+
+## 5. Applications of the Tilt Model
+
+This model is applied in various areas of technology and scientific research:
+
+- **Head Orientation Tracking**: The tilt model is used to monitor and analyze head movements, which can be useful in virtual and augmented reality (VR/AR) systems.
+- **Inertial Navigation Systems (INS)**: The model helps track the orientation of vehicles and drones, assisting in navigation and balance.
+- **Robotic Systems**: The tilt model can be used to stabilize robotic systems or assist in object manipulation by tracking their orientation.
+
+## 6. Conclusion
+
+The tilt model using **α (alpha)** and **γ (gamma)** provides a powerful and intuitive way to describe an object's orientation in 3D space. By mapping these parameters to a unit sphere or a 2D map, we can visualize and track the object's orientation and movement in real time. This model has wide applications in navigation, virtual and augmented reality, robotics, and more.
+
+---
+
+## References
+
+- **Angelaki, D. E., & Laurens, J. (2020).** A gravity-based three-dimensional compass in the mouse brain. *Nature Communications*.
+- **Page, H., et al. (2017).** A detailed model for gravity-based 3D orientation in vertebrates. *Journal of Neurophysiology*.
