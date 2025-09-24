@@ -206,11 +206,6 @@
                     <input type="range" id="gammaRange" min="-180" max="180" value="0" step="1">
                     <input type="number" id="gammaNumber" min="-180" max="180" value="0" step="1">
                 </div>
-                <div class="input-group">
-                    <label>EHAz (Elevation/Heading Angle Z) - Reference angle for True Anomaly</label>
-                    <input type="range" id="ehazRange" min="-180" max="180" value="0" step="1">
-                    <input type="number" id="ehazNumber" min="-180" max="180" value="0" step="1">
-                </div>
                 <div class="vector-display" id="tiltVectorDisplay">
                     <div>G = (sin α·cos γ, sin α·sin γ, -cos α)</div>
                     <div class="vector-component">Gx = <span id="gx">0.00</span></div>
@@ -276,12 +271,17 @@
                 </div>
                 <div class="input-group">
                     <label>
-                        <input type="checkbox" id="showTiltVector" checked> Show tilt-based vector
+                        <input type="checkbox" id="showCustomVector"> Show custom vector
                     </label>
                 </div>
                 <div class="input-group">
                     <label>
-                        <input type="checkbox" id="showCustomVector"> Show custom vector
+                        <input type="checkbox" id="showOrientationVector" checked> Show orientation vector (α,γ)
+                    </label>
+                </div>
+                <div class="input-group">
+                    <label>
+                        <input type="checkbox" id="showGVector" checked> Show G vector
                     </label>
                 </div>
                 <div class="input-group">
@@ -318,12 +318,16 @@
                         <span>Z-axis (Forward)</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-color" style="background-color: #ff00ff;"></div>
-                        <span>Tilt-based G Vector</span>
-                    </div>
-                    <div class="legend-item">
                         <div class="legend-color" style="background-color: #ff9500;"></div>
                         <span>Custom G Vector</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #00ffff;"></div>
+                        <span>Orientation Vector (α,γ)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #ff00ff;"></div>
+                        <span>G Vector (Gravity)</span>
                     </div>
                     <div class="legend-item">
                         <div class="legend-color" style="background-color: #232a3a;"></div>
@@ -362,11 +366,12 @@
                         
                         <p><strong>γ (Gamma) - Tilt Orientation:</strong><br>
                         Range: -180° to +180°<br>
-                        • 0° = nose-down (ND)<br>
-                        • 180° = nose-up (NU)<br>
-                        • 90° = left-ear-down (LED)<br>
-                        • -90° = right-ear-down (RED)<br>
-                        Formula: γ = atan2(G<sub>Y</sub>, G<sub>X</sub>)</p>
+                        • 0° = nose-down position (ND)<br>
+                        • 180° = nose-up position (NU)<br>
+                        • 90° = left-ear-down position (LED) - ready for left roll<br>
+                        • -90° = right-ear-down position (RED) - ready for right roll<br>
+                        Formula: γ = atan2(G<sub>Y</sub>, G<sub>X</sub>)<br>
+                        <em>Note: γ=±90° positions for roll; α executes the rolling motion</em></p>
                         
                         <h4 style="color: var(--accent); margin: 15px 0 5px 0;">Spherical ↔ Cartesian Transformations</h4>
                         <p><strong>Forward Transformation (α, γ → GX, GY, GZ):</strong></p>
@@ -403,7 +408,22 @@
                         <div style="background: #0a0c10; padding: 8px; border-radius: 4px; font-family: monospace;">
                             TA = EHAz - γ - atan2(-sin(γ), cos(α)·cos(γ))
                         </div>
-                        <p style="font-size: 11px; margin-top: 5px;">Where EHAz is the Elevation/Heading Angle Z reference.</p>
+                        <p style="font-size: 11px; margin-top: 5px;">Where EHAz = 0° (fixed reference angle).</p>
+                        
+                        <h4 style="color: var(--accent); margin: 15px 0 5px 0;">Vector Definitions</h4>
+                        <p><strong>Orientation Vector (Cyan):</strong> Head/body "up" direction</p>
+                        <div style="background: #0a0c10; padding: 8px; border-radius: 4px; font-family: monospace;">
+                            Orientation = [-sin(α)cos(γ), -sin(α)sin(γ), cos(α)]
+                        </div>
+                        
+                        <p><strong>G Vector (Magenta):</strong> Gravity direction in head frame</p>
+                        <div style="background: #0a0c10; padding: 8px; border-radius: 4px; font-family: monospace;">
+                            G = [sin(α)cos(γ), sin(α)sin(γ), -cos(α)]
+                        </div>
+                        <p style="font-size: 11px; margin-top: 5px;">
+                        • Orientation vector: Where head "up" points in space<br>
+                        • G vector: Direction of gravity as perceived by head<br>
+                        • These vectors are opposite to each other (G = -Orientation)</p>
                         
                         <h4 style="color: var(--accent); margin: 15px 0 5px 0;">Coordinate System</h4>
                         <p>Head-centered reference frame (paper convention):<br>
@@ -424,6 +444,15 @@
                             x = (γ + 180°) / 360° · W  (longitude)<br>
                             y = α / 180° · H           (latitude)
                         </div>
+                        
+                        <h4 style="color: var(--accent); margin: 15px 0 5px 0;">Roll Mechanics</h4>
+                        <p><strong>Two-Step Roll Process:</strong><br>
+                        1. <strong>γ (Positioning):</strong> Sets the orientation axis<br>
+                        • γ=±90° positions the body for rolling motion<br>
+                        • γ=0°/180° positions for pitching motion<br><br>
+                        2. <strong>α (Execution):</strong> Executes the movement<br>
+                        • When γ=±90°, changing α creates rolling motion<br>
+                        • When γ=0°/180°, changing α creates pitching motion</p>
                         
                         <h4 style="color: var(--accent); margin: 15px 0 5px 0;">Azimuth Frame Differences</h4>
                         <p><strong>YO (Yaw-Only):</strong> Simplest method, treats device as if always level. Good for basic heading calculations but ignores device orientation.<br><br>
@@ -462,7 +491,7 @@
     <script>
         // Three.js setup
         let scene, camera, renderer, controls;
-        let tiltVector, customVector;
+        let customVector, orientationVector, gVector;
         let coordinateAxes = { x: null, y: null, z: null };
         let gridHelper;
         let drosophilaModel;
@@ -473,9 +502,11 @@
         // Current vector values
         let currentAlpha = 0;
         let currentGamma = 0;
-        let currentEHAz = 0;
         let currentCustomVector = { x: 1, y: 1, z: 0 };
         let vectorScale = 1.5;
+        
+        // Fixed EHAz value for TA calculation (no slider)
+        const EHAz = 0;
         
         function init() {
             const canvas = document.getElementById('canvas');
@@ -519,7 +550,7 @@
             scene.add(directionalLight);
             
             // Initial render
-            updateTiltVector();
+            updateCalculations();
             updateCustomVector();
             animate();
             
@@ -634,14 +665,18 @@
         }
         
         function createVectors() {
-            // Tilt-based vector (bright magenta/pink)
-            tiltVector = createArrow(0xff00ff, 'Tilt Vector');
-            scene.add(tiltVector);
-            
             // Custom vector (orange)
             customVector = createArrow(0xff9500, 'Custom Vector');
             customVector.visible = false; // Start hidden by default
             scene.add(customVector);
+            
+            // Orientation vector (cyan) - shows current α,γ orientation
+            orientationVector = createArrow(0x00ffff, 'Orientation Vector');
+            scene.add(orientationVector);
+            
+            // G vector (magenta) - shows gravity direction
+            gVector = createArrow(0xff00ff, 'G Vector');
+            scene.add(gVector);
         }
         
         function createReferenceSphere() {
@@ -794,8 +829,9 @@
             sphereGridLines.add(meridianLine);
         }
         
+        
         function updateSpherePosition() {
-            if (!currentPositionMarker || !tiltVector) return;
+            if (!currentPositionMarker) return;
             
             // Get the tilt vector direction (paper coordinates)
             const paperVector = calculateTiltVector(currentAlpha, currentGamma);
@@ -1156,6 +1192,23 @@
             return new THREE.Vector3(x, y, z);
         }
         
+        function calculateOrientationVector(alphaDeg, gammaDeg) {
+            // Orientation vector represents the head/body "up" direction
+            // This is the direction that was originally "up" in the head frame
+            // After rotation by α and γ, the original [0,0,1] becomes:
+            
+            const alpha = alphaDeg * Math.PI / 180;
+            const gamma = gammaDeg * Math.PI / 180;
+            
+            // Head "up" direction after rotations
+            const x = -Math.sin(alpha) * Math.cos(gamma);  // X component
+            const y = -Math.sin(alpha) * Math.sin(gamma);  // Y component  
+            const z = Math.cos(alpha);                     // Z component
+            
+            return new THREE.Vector3(x, y, z);
+        }
+        
+        
         function calculateYawOnlyAzimuth(alphaDeg, gammaDeg) {
             // YO: Yaw-Only azimuth - projects gravity vector onto horizontal plane and calculates azimuth
             // This ignores tilt and only considers rotation around the vertical axis
@@ -1226,23 +1279,17 @@
             return taDeg;
         }
         
-        function updateTiltVector() {
+        function updateCalculations() {
             const paperVector = calculateTiltVector(currentAlpha, currentGamma);
             
-            // Transform paper coordinates to Three.js coordinates for display
-            // Paper: X=right, Y=nose, Z=up  →  Three.js: X=right, Y=up, Z=forward
-            const displayVector = new THREE.Vector3(
-                paperVector.x,  // Right ear → X (same)
-                paperVector.z,  // Up → Y (Three.js up)
-                paperVector.y   // Nose → Z (Three.js forward)
-            );
-            
-            updateArrow(tiltVector, displayVector, vectorScale);
+            // Update vectors
+            updateOrientationVector();
+            updateGVector();
             
             // Calculate all three azimuth values
             const yo = calculateYawOnlyAzimuth(currentAlpha, currentGamma);
             const eh = calculateEarthHorizontalAzimuth(currentAlpha, currentGamma);
-            const ta = calculateTiltedAzimuth(currentAlpha, currentGamma, currentEHAz);
+            const ta = calculateTiltedAzimuth(currentAlpha, currentGamma, EHAz);
             
             // Update drosophila model orientation
             updateDrosophilaOrientation();
@@ -1265,6 +1312,38 @@
             updateSpherePosition();
         }
         
+        function updateOrientationVector() {
+            if (!orientationVector) return;
+            
+            const paperOrientationVector = calculateOrientationVector(currentAlpha, currentGamma);
+            
+            // Transform paper coordinates to Three.js coordinates for display
+            // Paper: X=right, Y=nose, Z=up  →  Three.js: X=right, Y=up, Z=forward
+            const displayOrientationVector = new THREE.Vector3(
+                paperOrientationVector.x,  // Right ear → X (same)
+                paperOrientationVector.z,  // Up → Y (Three.js up)
+                paperOrientationVector.y   // Nose → Z (Three.js forward)
+            );
+            
+            updateArrow(orientationVector, displayOrientationVector, vectorScale);
+        }
+        
+        function updateGVector() {
+            if (!gVector) return;
+            
+            const paperGVector = calculateTiltVector(currentAlpha, currentGamma);
+            
+            // Transform paper coordinates to Three.js coordinates for display
+            // Paper: X=right, Y=nose, Z=up  →  Three.js: X=right, Y=up, Z=forward
+            const displayGVector = new THREE.Vector3(
+                paperGVector.x,  // Right ear → X (same)
+                paperGVector.z,  // Up → Y (Three.js up)
+                paperGVector.y   // Nose → Z (Three.js forward)
+            );
+            
+            updateArrow(gVector, displayGVector, vectorScale);
+        }
+        
         function verifyInverseTransformation(gx, gy, gz) {
             // Inverse transformation: GX, GY, GZ → α, γ
             const calculatedAlpha = Math.acos(-gz) * 180 / Math.PI;
@@ -1284,11 +1363,30 @@
             // Reset rotation
             drosophilaModel.rotation.set(0, 0, 0);
             
-            // Apply rotations to match the head coordinate system
-            // First rotate around Z-axis (gamma - yaw rotation)
+            // Paper coordinate system: X=right ear, Y=nose, Z=up
+            // Paper conventions: 
+            // - γ=0°: Nose-Down (ND) - positioned for pitch down
+            // - γ=180°: Nose-Up (NU) - positioned for pitch up  
+            // - γ=90°: Left-Ear-Down (LED) - positioned for left roll
+            // - γ=-90°: Right-Ear-Down (RED) - positioned for right roll
+            // Note: γ sets the orientation/position, α executes the movement
+            
+            // The drosophila model was built with nose pointing in +Z direction (Three.js forward)
+            // For proper roll representation, we need to think about the rotation axes:
+            
+            // In aircraft/biology terms:
+            // - Pitch: rotation around X-axis (left ear to right ear axis)
+            // - Roll: rotation around Y-axis (nose-to-tail axis) 
+            // - Yaw: rotation around Z-axis (vertical axis)
+            
+            // Apply gamma rotation: this controls both pitch and roll depending on angle
+            // For γ=0°/180° (ND/NU): should be pitch (rotation around X-axis)
+            // For γ=±90° (LED/RED): should be roll (rotation around Z-axis of model)
+            
+            // Since γ mixes pitch and roll, we apply it as rotation around Z-axis (nose-tail axis)
             drosophilaModel.rotateZ(gamma);
             
-            // Then rotate around X-axis (alpha - pitch/tilt rotation)
+            // Then apply alpha rotation around X-axis for overall tilt
             drosophilaModel.rotateX(alpha);
         }
         
@@ -1320,26 +1418,19 @@
             const alphaNumber = document.getElementById('alphaNumber');
             const gammaRange = document.getElementById('gammaRange');
             const gammaNumber = document.getElementById('gammaNumber');
-            const ehazRange = document.getElementById('ehazRange');
-            const ehazNumber = document.getElementById('ehazNumber');
             
             function syncAlpha() {
                 currentAlpha = parseFloat(alphaRange.value);
                 alphaNumber.value = currentAlpha;
-                updateTiltVector();
+                updateCalculations();
             }
             
             function syncGamma() {
                 currentGamma = parseFloat(gammaRange.value);
                 gammaNumber.value = currentGamma;
-                updateTiltVector();
+                updateCalculations();
             }
             
-            function syncEHAz() {
-                currentEHAz = parseFloat(ehazRange.value);
-                ehazNumber.value = currentEHAz;
-                updateTiltVector();
-            }
             
             alphaRange.addEventListener('input', syncAlpha);
             alphaNumber.addEventListener('input', () => {
@@ -1353,11 +1444,6 @@
                 syncGamma();
             });
             
-            ehazRange.addEventListener('input', syncEHAz);
-            ehazNumber.addEventListener('input', () => {
-                ehazRange.value = ehazNumber.value;
-                syncEHAz();
-            });
             
             // Custom vector controls
             document.getElementById('customX').addEventListener('input', updateCustomVectorFromInputs);
@@ -1371,7 +1457,7 @@
             function updateScale() {
                 vectorScale = parseFloat(scaleRange.value);
                 scaleNumber.value = vectorScale;
-                updateTiltVector();
+                updateCalculations();
                 updateCustomVector();
             }
             
@@ -1392,12 +1478,16 @@
                 if (gridHelper) gridHelper.visible = e.target.checked;
             });
             
-            document.getElementById('showTiltVector').addEventListener('change', (e) => {
-                if (tiltVector) tiltVector.visible = e.target.checked;
-            });
-            
             document.getElementById('showCustomVector').addEventListener('change', (e) => {
                 if (customVector) customVector.visible = e.target.checked;
+            });
+            
+            document.getElementById('showOrientationVector').addEventListener('change', (e) => {
+                if (orientationVector) orientationVector.visible = e.target.checked;
+            });
+            
+            document.getElementById('showGVector').addEventListener('change', (e) => {
+                if (gVector) gVector.visible = e.target.checked;
             });
             
             document.getElementById('showDrosophila').addEventListener('change', (e) => {
@@ -1429,9 +1519,9 @@
                 case 'noseup':
                     currentAlpha = 90; currentGamma = 180; break;  // NU: α=90°, γ=180° (pitch backward)
                 case 'lefteardown':
-                    currentAlpha = 90; currentGamma = 90; break;   // LED: α=90°, γ=90° (roll left)
+                    currentAlpha = 90; currentGamma = 90; break;   // LED: α=90°, γ=90° (roll left - left ear down)
                 case 'righteardown':
-                    currentAlpha = 90; currentGamma = -90; break;  // RED: α=90°, γ=-90° (roll right)
+                    currentAlpha = 90; currentGamma = -90; break;  // RED: α=90°, γ=-90° (roll right - right ear down)
                 case 'diagonal1':
                     currentAlpha = 45; currentGamma = 45; break;   // Diagonal: ND+LED
                 case 'diagonal2':
@@ -1452,7 +1542,7 @@
             document.getElementById('gammaRange').value = currentGamma;
             document.getElementById('gammaNumber').value = currentGamma;
             
-            updateTiltVector();
+            updateCalculations();
         }
         
         function applyCustomVector() {
