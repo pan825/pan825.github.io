@@ -124,5 +124,5 @@ The tilt model using **α (alpha)** and **γ (gamma)** provides a powerful and i
 
 ## References
 
-- **Angelaki, D. E., & Laurens, J. (2020).** A gravity-based three-dimensional compass in the mouse brain. *Nature Communications*.
+- **Angelaki, D. E., & Laurens, J. (2020).** A gravity-based three-dimensional compass in the mouse brain. *Nature Communications*. https://doi.org/10.1038/s41467-020-15566-5
 - **Page, H., et al. (2017).** A detailed model for gravity-based 3D orientation in vertebrates. *Journal of Neurophysiology*.
