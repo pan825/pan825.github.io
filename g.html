@@ -202,30 +202,41 @@
                     <input type="number" id="alphaNumber" min="0" max="180" value="0" step="1">
                 </div>
                 <div class="input-group">
-                    <label>γ (Gamma) - Rotation: 0° (+Z direction) → ±180°</label>
+                    <label>γ (Gamma) - Tilt orientation: 0°=ND, 180°=NU, 90°=LED, -90°=RED</label>
                     <input type="range" id="gammaRange" min="-180" max="180" value="0" step="1">
                     <input type="number" id="gammaNumber" min="-180" max="180" value="0" step="1">
                 </div>
+                <div class="input-group">
+                    <label>EHAz (Elevation/Heading Angle Z) - Reference angle for True Anomaly</label>
+                    <input type="range" id="ehazRange" min="-180" max="180" value="0" step="1">
+                    <input type="number" id="ehazNumber" min="-180" max="180" value="0" step="1">
+                </div>
                 <div class="vector-display" id="tiltVectorDisplay">
-                    <div>G = (sin α·sin γ, -cos α, sin α·cos γ)</div>
+                    <div>G = (sin α·cos γ, sin α·sin γ, -cos α)</div>
                     <div class="vector-component">Gx = <span id="gx">0.00</span></div>
                     <div class="vector-component">Gy = <span id="gy">-1.00</span></div>
                     <div class="vector-component">Gz = <span id="gz">0.00</span></div>
                     <div class="vector-component">||G|| = <span id="gnorm">1.00</span></div>
+                    <div style="border-top: 1px solid #2a2e3d; margin-top: 8px; padding-top: 8px;">
+                        <div class="vector-component"><strong>Azimuth Calculations:</strong></div>
+                        <div class="vector-component">YO (Yaw-Only) = <span id="yo">0.00</span>°</div>
+                        <div class="vector-component">EH (Earth-Horizontal) = <span id="eh">0.00</span>°</div>
+                        <div class="vector-component">TA (Tilted) = <span id="ta">0.00</span>°</div>
+                    </div>
                 </div>
                 <div class="preset-buttons">
-                    <button onclick="setPreset('upright')">Upright</button>
-                    <button onclick="setPreset('forward')">Forward Tilt</button>
-                    <button onclick="setPreset('backward')">Backward Tilt</button>
-                    <button onclick="setPreset('left')">Left Tilt</button>
-                    <button onclick="setPreset('right')">Right Tilt</button>
-                    <button onclick="setPreset('inverted')">Inverted</button>
-                    <button onclick="setPreset('leftSide')">Left Side</button>
-                    <button onclick="setPreset('rightSide')">Right Side</button>
-                    <button onclick="setPreset('diagonal')">Diagonal</button>
+                    <button onclick="setPreset('upright')">UP (Upright)</button>
+                    <button onclick="setPreset('upsidedown')">UD (Upside-Down)</button>
+                    <button onclick="setPreset('nosedown')">ND (Nose-Down)</button>
+                    <button onclick="setPreset('noseup')">NU (Nose-Up)</button>
+                    <button onclick="setPreset('lefteardown')">LED (Left-Ear-Down)</button>
+                    <button onclick="setPreset('righteardown')">RED (Right-Ear-Down)</button>
+                    <button onclick="setPreset('diagonal1')">Diagonal ND+LED</button>
+                    <button onclick="setPreset('diagonal2')">Diagonal NU+RED</button>
                     <button onclick="setPreset('sleeping')">Sleeping</button>
                     <button onclick="setPreset('climbing')">Climbing</button>
                     <button onclick="setPreset('hanging')">Hanging</button>
+                    <button onclick="setPreset('custom')">Custom</button>
                 </div>
             </div>
             
@@ -279,6 +290,11 @@
                     </label>
                 </div>
                 <div class="input-group">
+                    <label>
+                        <input type="checkbox" id="showSphere" checked> Show reference sphere
+                    </label>
+                </div>
+                <div class="input-group">
                     <label>Vector scale factor:</label>
                     <input type="range" id="scaleRange" min="0.5" max="3" value="1.5" step="0.1">
                     <input type="number" id="scaleNumber" min="0.5" max="3" value="1.5" step="0.1">
@@ -317,14 +333,123 @@
                         <div class="legend-color" style="background-color: #8B4513;"></div>
                         <span>Drosophila Model</span>
                     </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: rgba(255,255,255,0.1);"></div>
+                        <span>Reference Sphere</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #ffff00;"></div>
+                        <span>G Vector on Sphere (α,γ)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mathematical Theory Section -->
+            <div class="section">
+                <div class="section-title">
+                    <span onclick="toggleMathSection()" style="cursor: pointer; user-select: none;">
+                        📐 Mathematical Theory <span id="mathToggle">▼</span>
+                    </span>
+                </div>
+                <div id="mathSection" style="display: none;">
+                    <div style="font-size: 11px; line-height: 1.4; color: var(--muted);">
+                        <h4 style="color: var(--accent); margin: 10px 0 5px 0;">Tilt Model Parameters</h4>
+                        <p><strong>α (Alpha) - Tilt Angle:</strong><br>
+                        Range: 0° to 180°<br>
+                        • 0° = upright position (UP)<br>
+                        • 180° = upside-down position (UD)<br>
+                        Formula: α = acos(-G<sub>Z</sub>)</p>
+                        
+                        <p><strong>γ (Gamma) - Tilt Orientation:</strong><br>
+                        Range: -180° to +180°<br>
+                        • 0° = nose-down (ND)<br>
+                        • 180° = nose-up (NU)<br>
+                        • 90° = left-ear-down (LED)<br>
+                        • -90° = right-ear-down (RED)<br>
+                        Formula: γ = atan2(G<sub>Y</sub>, G<sub>X</sub>)</p>
+                        
+                        <h4 style="color: var(--accent); margin: 15px 0 5px 0;">Spherical ↔ Cartesian Transformations</h4>
+                        <p><strong>Forward Transformation (α, γ → GX, GY, GZ):</strong></p>
+                        <div style="background: #0a0c10; padding: 8px; border-radius: 4px; font-family: monospace;">
+                            GX = sin(α) · cos(γ)<br>
+                            GY = sin(α) · sin(γ)<br>
+                            GZ = -cos(α)
+                        </div>
+                        
+                        <p><strong>Inverse Transformation (GX, GY, GZ → α, γ):</strong></p>
+                        <div style="background: #0a0c10; padding: 8px; border-radius: 4px; font-family: monospace;">
+                            α = acos(-GZ)<br>
+                            γ = atan2(GY, GX)
+                        </div>
+                        
+                        <h4 style="color: var(--accent); margin: 15px 0 5px 0;">3D Azimuth Tuning Curves</h4>
+                        <p>Three different methods for computing azimuth in 3D space:</p>
+                        
+                        <p><strong>1. Yaw-Only (YO) Azimuth:</strong><br>
+                        Projects gravity vector onto horizontal plane, ignoring tilt:</p>
+                        <div style="background: #0a0c10; padding: 8px; border-radius: 4px; font-family: monospace;">
+                            YO = atan2(sin(α)·sin(γ), sin(α)·cos(γ))
+                        </div>
+                        
+                        <p><strong>2. Earth-Horizontal (EH) Azimuth:</strong><br>
+                        Azimuth relative to earth's horizontal plane:</p>
+                        <div style="background: #0a0c10; padding: 8px; border-radius: 4px; font-family: monospace;">
+                            EH = atan2(Gx/||Gh||, Gz/||Gh||)<br>
+                            where ||Gh|| = √(Gx² + Gz²)
+                        </div>
+                        
+                        <p><strong>3. Tilted (TA) Azimuth:</strong><br>
+                        Azimuth in the tilted reference frame:</p>
+                        <div style="background: #0a0c10; padding: 8px; border-radius: 4px; font-family: monospace;">
+                            TA = EHAz - γ - atan2(-sin(γ), cos(α)·cos(γ))
+                        </div>
+                        <p style="font-size: 11px; margin-top: 5px;">Where EHAz is the Elevation/Heading Angle Z reference.</p>
+                        
+                        <h4 style="color: var(--accent); margin: 15px 0 5px 0;">Coordinate System</h4>
+                        <p>Head-centered reference frame (paper convention):<br>
+                        • +X axis: Right ear direction<br>
+                        • +Y axis: Nose direction<br>
+                        • +Z axis: Up direction (gravity = [0,0,-1] when upright)</p>
+                        
+                        <h4 style="color: var(--accent); margin: 15px 0 5px 0;">Spherical Coordinate Mapping</h4>
+                        <p><strong>Longitude/Latitude Analogy (Y-axis as polar axis):</strong><br>
+                        • γ (gamma) = Longitude: Rotation around the nose axis (Y-axis)<br>
+                        • α (alpha) = Latitude: Angle from nose+ pole to nose- pole<br>
+                        • Pole positions: α=0° (nose+), α=180° (nose-)<br>
+                        • Equator: α=90° (all horizontal orientations)</p>
+                        
+                        <h4 style="color: var(--accent); margin: 15px 0 5px 0;">2D Map Projection</h4>
+                        <p>Plate Carrée projection for 2D visualization:</p>
+                        <div style="background: #0a0c10; padding: 8px; border-radius: 4px; font-family: monospace;">
+                            x = (γ + 180°) / 360° · W  (longitude)<br>
+                            y = α / 180° · H           (latitude)
+                        </div>
+                        
+                        <h4 style="color: var(--accent); margin: 15px 0 5px 0;">Azimuth Frame Differences</h4>
+                        <p><strong>YO (Yaw-Only):</strong> Simplest method, treats device as if always level. Good for basic heading calculations but ignores device orientation.<br><br>
+                        <strong>EH (Earth-Horizontal):</strong> Accounts for device tilt by projecting onto earth's horizontal plane. Most intuitive for navigation applications.<br><br>
+                        <strong>TA (Tilted):</strong> Calculates azimuth in the device's own tilted reference frame. Useful for studying how neurons encode 3D orientation.</p>
+                        
+                        <h4 style="color: var(--accent); margin: 15px 0 5px 0;">Applications</h4>
+                        <p>• 3D compass neurons in animal navigation<br>
+                        • Head direction cells in neuroscience research<br>
+                        • Virtual/Augmented Reality head tracking<br>
+                        • Inertial Navigation Systems<br>
+                        • Robotic orientation and balance</p>
+                        
+                        <h4 style="color: var(--accent); margin: 15px 0 5px 0;">References</h4>
+                        <p style="font-size: 10px;">
+                        • Angelaki, D. E., & Laurens, J. (2020). A gravity-based three-dimensional compass in the mouse brain. Nature Communications.<br>
+                        • Page, H., et al. (2017). A detailed model for gravity-based 3D orientation in vertebrates. Journal of Neurophysiology.
+                        </p>
+                    </div>
                 </div>
             </div>
             
             <!-- Info Panel -->
             <div class="info-panel">
-                <strong>Coordinate System:</strong><br>
-                Head-centered coordinate frame where +Y is up, +X is right ear direction, +Z is nose direction.<br><br>
-                <strong>Tilt Vector:</strong> Represents gravity direction in head coordinate system where (0,0) is upright and gravity points down (-Y direction).
+                <strong>Quick Reference:</strong><br>
+                The gravity vector G represents the "downward" direction in the head coordinate system. Use the presets to explore different orientations, or adjust α and γ manually to see how they map to 3D space.
             </div>
         </div>
         
@@ -341,10 +466,14 @@
         let coordinateAxes = { x: null, y: null, z: null };
         let gridHelper;
         let drosophilaModel;
+        let referenceSphere;
+        let sphereGridLines;
+        let currentPositionMarker;
         
         // Current vector values
         let currentAlpha = 0;
         let currentGamma = 0;
+        let currentEHAz = 0;
         let currentCustomVector = { x: 1, y: 1, z: 0 };
         let vectorScale = 1.5;
         
@@ -378,6 +507,9 @@
             
             // Create drosophila model
             createDrosophilaModel();
+            
+            // Create reference sphere
+            createReferenceSphere();
             
             // Add lighting
             const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
@@ -510,6 +642,179 @@
             customVector = createArrow(0xff9500, 'Custom Vector');
             customVector.visible = false; // Start hidden by default
             scene.add(customVector);
+        }
+        
+        function createReferenceSphere() {
+            const sphereRadius = 1.2;
+            
+            // Create the main sphere
+            const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 32, 16);
+            const sphereMaterial = new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.1,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            });
+            referenceSphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+            scene.add(referenceSphere);
+            
+            // Create sphere grid lines (latitude and longitude)
+            sphereGridLines = new THREE.Group();
+            
+            // Latitude lines (constant α - circles around the Y-axis as polar axis)
+            const latLineMaterial = new THREE.LineBasicMaterial({ 
+                color: 0x666666, 
+                transparent: true, 
+                opacity: 0.6 
+            });
+            
+            for (let alpha = 30; alpha <= 150; alpha += 30) {
+                const points = [];
+                const alphaRad = alpha * Math.PI / 180;
+                
+                for (let gamma = 0; gamma <= 360; gamma += 5) {
+                    const gammaRad = gamma * Math.PI / 180;
+                    
+                    // Paper coordinates: GX = sin(α)cos(γ), GY = sin(α)sin(γ), GZ = -cos(α)
+                    const gx = Math.sin(alphaRad) * Math.cos(gammaRad);
+                    const gy = Math.sin(alphaRad) * Math.sin(gammaRad);
+                    const gz = -Math.cos(alphaRad);
+                    
+                    // Map to Three.js: Paper Y (nose) → Three.js Z, Paper Z (up) → Three.js Y
+                    const x = gx * sphereRadius;      // Right ear → X
+                    const y = gz * sphereRadius;      // Up → Y (Three.js up)
+                    const z = gy * sphereRadius;      // Nose → Z (Three.js forward)
+                    
+                    points.push(new THREE.Vector3(x, y, z));
+                }
+                
+                const latGeometry = new THREE.BufferGeometry().setFromPoints(points);
+                const latLine = new THREE.Line(latGeometry, latLineMaterial);
+                sphereGridLines.add(latLine);
+            }
+            
+            // Longitude lines (constant γ - meridians from nose+ to nose- pole)
+            const lonLineMaterial = new THREE.LineBasicMaterial({ 
+                color: 0x888888, 
+                transparent: true, 
+                opacity: 0.6 
+            });
+            
+            for (let gamma = 0; gamma < 360; gamma += 30) {
+                const points = [];
+                const gammaRad = gamma * Math.PI / 180;
+                
+                for (let alpha = 0; alpha <= 180; alpha += 5) {
+                    const alphaRad = alpha * Math.PI / 180;
+                    
+                    // Paper coordinates: GX = sin(α)cos(γ), GY = sin(α)sin(γ), GZ = -cos(α)
+                    const gx = Math.sin(alphaRad) * Math.cos(gammaRad);
+                    const gy = Math.sin(alphaRad) * Math.sin(gammaRad);
+                    const gz = -Math.cos(alphaRad);
+                    
+                    // Map to Three.js: Paper Y (nose) → Three.js Z, Paper Z (up) → Three.js Y
+                    const x = gx * sphereRadius;      // Right ear → X
+                    const y = gz * sphereRadius;      // Up → Y (Three.js up)
+                    const z = gy * sphereRadius;      // Nose → Z (Three.js forward)
+                    
+                    points.push(new THREE.Vector3(x, y, z));
+                }
+                
+                const lonGeometry = new THREE.BufferGeometry().setFromPoints(points);
+                const lonLine = new THREE.Line(lonGeometry, lonLineMaterial);
+                sphereGridLines.add(lonLine);
+            }
+            
+            scene.add(sphereGridLines);
+            
+            // Create current position marker
+            const markerGeometry = new THREE.SphereGeometry(0.05, 8, 6);
+            const markerMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0xffff00,
+                emissive: 0x444400
+            });
+            currentPositionMarker = new THREE.Mesh(markerGeometry, markerMaterial);
+            scene.add(currentPositionMarker);
+            
+            // Add equator line (α = 90°) - all horizontal orientations
+            const equatorPoints = [];
+            for (let gamma = 0; gamma <= 360; gamma += 5) {
+                const gammaRad = gamma * Math.PI / 180;
+                
+                // At α = 90°: GX = cos(γ), GY = sin(γ), GZ = 0
+                const gx = Math.cos(gammaRad);
+                const gy = Math.sin(gammaRad);
+                const gz = 0;  // -cos(90°) = 0
+                
+                // Map to Three.js coordinates
+                const x = gx * sphereRadius;      // Right ear → X
+                const y = gz * sphereRadius;      // Up → Y (0 for equator)
+                const z = gy * sphereRadius;      // Nose → Z
+                
+                equatorPoints.push(new THREE.Vector3(x, y, z));
+            }
+            
+            const equatorGeometry = new THREE.BufferGeometry().setFromPoints(equatorPoints);
+            const equatorMaterial = new THREE.LineBasicMaterial({ 
+                color: 0xaaaaaa, 
+                transparent: true, 
+                opacity: 0.8,
+                linewidth: 2
+            });
+            const equatorLine = new THREE.Line(equatorGeometry, equatorMaterial);
+            sphereGridLines.add(equatorLine);
+            
+            // Add prime meridian (γ = 0°) - nose-down meridian from nose+ to nose-
+            const meridianPoints = [];
+            for (let alpha = 0; alpha <= 180; alpha += 5) {
+                const alphaRad = alpha * Math.PI / 180;
+                
+                // At γ = 0°: GX = sin(α), GY = 0, GZ = -cos(α)
+                const gx = Math.sin(alphaRad);
+                const gy = 0;  // sin(0°) = 0
+                const gz = -Math.cos(alphaRad);
+                
+                // Map to Three.js coordinates
+                const x = gx * sphereRadius;      // Right ear → X
+                const y = gz * sphereRadius;      // Up → Y
+                const z = gy * sphereRadius;      // Nose → Z (0 for γ=0°)
+                
+                meridianPoints.push(new THREE.Vector3(x, y, z));
+            }
+            
+            const meridianGeometry = new THREE.BufferGeometry().setFromPoints(meridianPoints);
+            const meridianMaterial = new THREE.LineBasicMaterial({ 
+                color: 0xaaaaaa, 
+                transparent: true, 
+                opacity: 0.8,
+                linewidth: 2
+            });
+            const meridianLine = new THREE.Line(meridianGeometry, meridianMaterial);
+            sphereGridLines.add(meridianLine);
+        }
+        
+        function updateSpherePosition() {
+            if (!currentPositionMarker || !tiltVector) return;
+            
+            // Get the tilt vector direction (paper coordinates)
+            const paperVector = calculateTiltVector(currentAlpha, currentGamma);
+            const sphereRadius = 1.2;
+            
+            // Transform to the same display coordinates as the tilt vector
+            // Paper: X=right, Y=nose, Z=up  →  Three.js: X=right, Y=up, Z=forward
+            const displayVector = new THREE.Vector3(
+                paperVector.x,  // Right ear → X (same)
+                paperVector.z,  // Up → Y (Three.js up)
+                paperVector.y   // Nose → Z (Three.js forward)
+            );
+            
+            // Scale to sphere radius to show intersection point
+            const x = displayVector.x * sphereRadius;
+            const y = displayVector.y * sphereRadius;
+            const z = displayVector.z * sphereRadius;
+            
+            currentPositionMarker.position.set(x, y, z);
         }
         
         function createDrosophilaModel() {
@@ -843,25 +1148,130 @@
             const alpha = alphaDeg * Math.PI / 180;
             const gamma = gammaDeg * Math.PI / 180;
             
-            const x = Math.sin(alpha) * Math.sin(gamma);
-            const y = -Math.cos(alpha);
-            const z = Math.sin(alpha) * Math.cos(gamma);
+            // Paper coordinate system: GX = sin(α)cos(γ), GY = sin(α)sin(γ), GZ = -cos(α)
+            const x = Math.sin(alpha) * Math.cos(gamma);  // GX
+            const y = Math.sin(alpha) * Math.sin(gamma);  // GY
+            const z = -Math.cos(alpha);                   // GZ
             
             return new THREE.Vector3(x, y, z);
         }
         
+        function calculateYawOnlyAzimuth(alphaDeg, gammaDeg) {
+            // YO: Yaw-Only azimuth - projects gravity vector onto horizontal plane and calculates azimuth
+            // This ignores tilt and only considers rotation around the vertical axis
+            const alpha = alphaDeg * Math.PI / 180;
+            const gamma = gammaDeg * Math.PI / 180;
+            
+            // Project gravity vector components using correct coordinate system
+            const gx = Math.sin(alpha) * Math.cos(gamma);   // GX
+            const gy = Math.sin(alpha) * Math.sin(gamma);   // GY
+            
+            // Calculate azimuth in horizontal plane (atan2(gy, gx))
+            let yoAzimuth = Math.atan2(gy, gx) * 180 / Math.PI;
+            
+            // Normalize to [0, 360] degrees
+            while (yoAzimuth < 0) yoAzimuth += 360;
+            while (yoAzimuth >= 360) yoAzimuth -= 360;
+            
+            return yoAzimuth;
+        }
+        
+        function calculateEarthHorizontalAzimuth(alphaDeg, gammaDeg) {
+            // EH: Earth-Horizontal azimuth - azimuth relative to earth's horizontal plane
+            // This accounts for the device's tilt relative to earth's gravity
+            const alpha = alphaDeg * Math.PI / 180;
+            const gamma = gammaDeg * Math.PI / 180;
+            
+            // Calculate gravity vector components using correct coordinate system
+            const gx = Math.sin(alpha) * Math.cos(gamma);   // GX
+            const gy = Math.sin(alpha) * Math.sin(gamma);   // GY
+            const gz = -Math.cos(alpha);                    // GZ
+            
+            // Project onto earth-horizontal plane (perpendicular to earth's gravity [0,0,-1])
+            // Remove the vertical component and normalize the horizontal projection
+            const horizontalMagnitude = Math.sqrt(gx * gx + gy * gy);
+            
+            if (horizontalMagnitude < 1e-6) {
+                return 0; // Undefined when perfectly vertical
+            }
+            
+            const hx = gx / horizontalMagnitude;
+            const hy = gy / horizontalMagnitude;
+            
+            // Calculate azimuth in earth-horizontal frame
+            let ehAzimuth = Math.atan2(hy, hx) * 180 / Math.PI;
+            
+            // Normalize to [0, 360] degrees
+            while (ehAzimuth < 0) ehAzimuth += 360;
+            while (ehAzimuth >= 360) ehAzimuth -= 360;
+            
+            return ehAzimuth;
+        }
+        
+        function calculateTiltedAzimuth(alphaDeg, gammaDeg, ehazDeg) {
+            // TA: Tilted azimuth - azimuth in the tilted reference frame
+            // This uses the original True Anomaly calculation
+            const alpha = alphaDeg * Math.PI / 180;
+            const gamma = gammaDeg * Math.PI / 180;
+            const ehaz = ehazDeg * Math.PI / 180;
+            
+            // TA = EHAz - γ - atan2(-sin(γ), cos(α) * cos(γ))
+            const ta = ehaz - gamma - Math.atan2(-Math.sin(gamma), Math.cos(alpha) * Math.cos(gamma));
+            
+            // Convert back to degrees and normalize to [0, 360]
+            let taDeg = ta * 180 / Math.PI;
+            while (taDeg < 0) taDeg += 360;
+            while (taDeg >= 360) taDeg -= 360;
+            
+            return taDeg;
+        }
+        
         function updateTiltVector() {
-            const vector = calculateTiltVector(currentAlpha, currentGamma);
-            updateArrow(tiltVector, vector, vectorScale);
+            const paperVector = calculateTiltVector(currentAlpha, currentGamma);
+            
+            // Transform paper coordinates to Three.js coordinates for display
+            // Paper: X=right, Y=nose, Z=up  →  Three.js: X=right, Y=up, Z=forward
+            const displayVector = new THREE.Vector3(
+                paperVector.x,  // Right ear → X (same)
+                paperVector.z,  // Up → Y (Three.js up)
+                paperVector.y   // Nose → Z (Three.js forward)
+            );
+            
+            updateArrow(tiltVector, displayVector, vectorScale);
+            
+            // Calculate all three azimuth values
+            const yo = calculateYawOnlyAzimuth(currentAlpha, currentGamma);
+            const eh = calculateEarthHorizontalAzimuth(currentAlpha, currentGamma);
+            const ta = calculateTiltedAzimuth(currentAlpha, currentGamma, currentEHAz);
             
             // Update drosophila model orientation
             updateDrosophilaOrientation();
             
-            // Update display
-            document.getElementById('gx').textContent = vector.x.toFixed(3);
-            document.getElementById('gy').textContent = vector.y.toFixed(3);
-            document.getElementById('gz').textContent = vector.z.toFixed(3);
-            document.getElementById('gnorm').textContent = vector.length().toFixed(3);
+            // Update display with paper coordinates
+            document.getElementById('gx').textContent = paperVector.x.toFixed(3);
+            document.getElementById('gy').textContent = paperVector.y.toFixed(3);
+            document.getElementById('gz').textContent = paperVector.z.toFixed(3);
+            document.getElementById('gnorm').textContent = paperVector.length().toFixed(3);
+            
+            // Update azimuth displays
+            document.getElementById('yo').textContent = yo.toFixed(2);
+            document.getElementById('eh').textContent = eh.toFixed(2);
+            document.getElementById('ta').textContent = ta.toFixed(2);
+            
+            // Verify inverse transformation (for debugging/validation)
+            verifyInverseTransformation(paperVector.x, paperVector.y, paperVector.z);
+            
+            // Update sphere position marker
+            updateSpherePosition();
+        }
+        
+        function verifyInverseTransformation(gx, gy, gz) {
+            // Inverse transformation: GX, GY, GZ → α, γ
+            const calculatedAlpha = Math.acos(-gz) * 180 / Math.PI;
+            const calculatedGamma = Math.atan2(gy, gx) * 180 / Math.PI;
+            
+            // Optional: log to console for verification
+            // console.log(`Inverse check: α=${calculatedAlpha.toFixed(2)}°, γ=${calculatedGamma.toFixed(2)}°`);
         }
         
         function updateDrosophilaOrientation() {
@@ -910,6 +1320,8 @@
             const alphaNumber = document.getElementById('alphaNumber');
             const gammaRange = document.getElementById('gammaRange');
             const gammaNumber = document.getElementById('gammaNumber');
+            const ehazRange = document.getElementById('ehazRange');
+            const ehazNumber = document.getElementById('ehazNumber');
             
             function syncAlpha() {
                 currentAlpha = parseFloat(alphaRange.value);
@@ -923,6 +1335,12 @@
                 updateTiltVector();
             }
             
+            function syncEHAz() {
+                currentEHAz = parseFloat(ehazRange.value);
+                ehazNumber.value = currentEHAz;
+                updateTiltVector();
+            }
+            
             alphaRange.addEventListener('input', syncAlpha);
             alphaNumber.addEventListener('input', () => {
                 alphaRange.value = alphaNumber.value;
@@ -933,6 +1351,12 @@
             gammaNumber.addEventListener('input', () => {
                 gammaRange.value = gammaNumber.value;
                 syncGamma();
+            });
+            
+            ehazRange.addEventListener('input', syncEHAz);
+            ehazNumber.addEventListener('input', () => {
+                ehazRange.value = ehazNumber.value;
+                syncEHAz();
             });
             
             // Custom vector controls
@@ -979,6 +1403,12 @@
             document.getElementById('showDrosophila').addEventListener('change', (e) => {
                 if (drosophilaModel) drosophilaModel.visible = e.target.checked;
             });
+            
+            document.getElementById('showSphere').addEventListener('change', (e) => {
+                if (referenceSphere) referenceSphere.visible = e.target.checked;
+                if (sphereGridLines) sphereGridLines.visible = e.target.checked;
+                if (currentPositionMarker) currentPositionMarker.visible = e.target.checked;
+            });
         }
         
         function updateCustomVectorFromInputs() {
@@ -991,29 +1421,30 @@
         function setPreset(preset) {
             switch (preset) {
                 case 'upright':
-                    currentAlpha = 0; currentGamma = 0; break;
-                case 'forward':
-                    currentAlpha = 45; currentGamma = 0; break;
-                case 'backward':
-                    currentAlpha = 45; currentGamma = 180; break;
-                case 'left':
-                    currentAlpha = 45; currentGamma = -90; break;
-                case 'right':
-                    currentAlpha = 45; currentGamma = 90; break;
-                case 'inverted':
-                    currentAlpha = 180; currentGamma = 0; break;
-                case 'leftSide':
-                    currentAlpha = 90; currentGamma = -90; break;
-                case 'rightSide':
-                    currentAlpha = 90; currentGamma = 90; break;
-                case 'diagonal':
-                    currentAlpha = 45; currentGamma = 45; break;
+                    currentAlpha = 0; currentGamma = 0; break;     // UP: α=0°, γ=0°
+                case 'upsidedown':
+                    currentAlpha = 180; currentGamma = 0; break;   // UD: α=180°, γ=0°
+                case 'nosedown':
+                    currentAlpha = 90; currentGamma = 0; break;    // ND: α=90°, γ=0° (pitch forward)
+                case 'noseup':
+                    currentAlpha = 90; currentGamma = 180; break;  // NU: α=90°, γ=180° (pitch backward)
+                case 'lefteardown':
+                    currentAlpha = 90; currentGamma = 90; break;   // LED: α=90°, γ=90° (roll left)
+                case 'righteardown':
+                    currentAlpha = 90; currentGamma = -90; break;  // RED: α=90°, γ=-90° (roll right)
+                case 'diagonal1':
+                    currentAlpha = 45; currentGamma = 45; break;   // Diagonal: ND+LED
+                case 'diagonal2':
+                    currentAlpha = 45; currentGamma = -135; break; // Diagonal: NU+RED
                 case 'sleeping':
-                    currentAlpha = 90; currentGamma = 0; break;
+                    currentAlpha = 90; currentGamma = 90; break;   // Same as LED
                 case 'climbing':
-                    currentAlpha = 30; currentGamma = 0; break;
+                    currentAlpha = 45; currentGamma = 0; break;    // Moderate forward tilt
                 case 'hanging':
-                    currentAlpha = 150; currentGamma = 0; break;
+                    currentAlpha = 135; currentGamma = 0; break;   // Inverted climbing
+                case 'custom':
+                    // Use current values for inverse calculation demo
+                    break;
             }
             
             document.getElementById('alphaRange').value = currentAlpha;
@@ -1026,6 +1457,19 @@
         
         function applyCustomVector() {
             updateCustomVectorFromInputs();
+        }
+        
+        function toggleMathSection() {
+            const mathSection = document.getElementById('mathSection');
+            const mathToggle = document.getElementById('mathToggle');
+            
+            if (mathSection.style.display === 'none') {
+                mathSection.style.display = 'block';
+                mathToggle.textContent = '▲';
+            } else {
+                mathSection.style.display = 'none';
+                mathToggle.textContent = '▼';
+            }
         }
         
         function animate() {
